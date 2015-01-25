@@ -23,6 +23,7 @@ import traceback
 import pykka
 import xbmc
 import utils
+from requests.exceptions import Timeout, HTTPError
 from trakt_library import TraktLibrary
 from xbmc_library import XBMCLibrary
 from sync import Sync
@@ -43,9 +44,12 @@ class Monitor(xbmc.Monitor):
     def onNotification(self, sender, method, data):
         data = json.loads(data)
         logger.debug("sender: %s method: %s data: %r" % (sender, method, data))
-
         if method == b'VideoLibrary.OnUpdate' and 'playcount' in data:
-            media_type = data['item']['type']
+            self._on_playcount_update(data)
+
+    def _on_playcount_update(self, data):
+        media_type = data['item']['type']
+        try:
             if media_type == 'movie':
                 movie = self._xbmc_library.movie(data['item']['id']).get()
                 logger.debug(movie)
@@ -53,9 +57,27 @@ class Monitor(xbmc.Monitor):
             elif media_type == 'episode':
                 episode = self._xbmc_library.episode(data['item']['id']).get()
                 self._sync.sync_episode(episode).get()
+        except Timeout:
+            notification("Trakt.tv did not respond.")
+            traceback.print_exc()
+        except HTTPError as e:
+            if e.response.status_code in [401, 403]:
+                notification("Authorization problem")
+            elif e.response.status_code in [500, 502, 503]:
+                notification("Server error")
+            else:
+                notification("Unexpected error")
+            traceback.print_exc()
+        except:
+            notification("Unexpected error")
+            traceback.print_exc()
 
     def onScanFinished(self, library):
         pass
+
+
+def notification(msg):
+    xbmc.executebuiltin("Notification(Trakt Sync,%s)" % msg)
 
 
 def main():
