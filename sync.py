@@ -44,11 +44,14 @@ class Sync(pykka.ThreadingActor):
             if len(watched) > 0:
                 added = self._trakt_library.add(**{media_type: [item]}).get()
                 logger.debug("added %s items (%s)" % (added, item))
-            else:
-                logger.debug("already watched (%s)" % item)
+                return added
+
+            logger.debug("already watched (%s)" % item)
+            return 1
         else:
             removed = self._trakt_library.remove(**{media_type: [item]}).get()
             logger.debug("removed %s items (%s)" % (removed, item))
+            return removed
 
 
 def sync_watched(xbmc_library, trakt_library):

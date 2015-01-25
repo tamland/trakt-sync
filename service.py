@@ -52,11 +52,15 @@ class Monitor(xbmc.Monitor):
         try:
             if media_type == 'movie':
                 movie = self._xbmc_library.movie(data['item']['id']).get()
-                logger.debug(movie)
-                self._sync.sync_movie(movie).get()
+                if self._sync.sync_movie(movie).get() == 0:
+                    logging.warning("movie did not sync %r" % movie)
+                    notification("Could not sync movie")
             elif media_type == 'episode':
                 episode = self._xbmc_library.episode(data['item']['id']).get()
-                self._sync.sync_episode(episode).get()
+                logger.debug("syncing episode %r " % episode)
+                if self._sync.sync_episode(episode).get() == 0:
+                    logging.warning("episode did not sync %r" % episode)
+                    notification("Could not sync episode")
         except Timeout:
             notification("Trakt.tv did not respond.")
             traceback.print_exc()
