@@ -64,7 +64,7 @@ class TraktSession(object):
         url = self._base_url + endpoint
         response = self._session.request(method, url, **kwargs)
         if response.status_code == 401 and autologin:
-            logger.info("401 Unauthorized")
+            logger.debug("401 Unauthorized. Logging in.")
             self.login()
             response = self._session.request(method, url, **kwargs)
 

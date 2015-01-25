@@ -17,13 +17,12 @@
 
 from __future__ import unicode_literals
 
+import logging
 import traceback
 import pykka
 from models import Movie, Episode
 from trakt_session import TraktSession
-from utils import log
 
-import logging
 logger = logging.getLogger(__name__)
 
 
@@ -60,7 +59,7 @@ class TraktLibrary(pykka.ThreadingActor):
                             playcount=episode['plays']
                         ))
                     except KeyError:
-                        logging.warning("Could not load episode.")
+                        logging.error("Could not load episode.")
                         traceback.print_exc()
         return episodes
 
@@ -73,18 +72,20 @@ class TraktLibrary(pykka.ThreadingActor):
     def add(self, movies=None, episodes=None):
         if not movies and not episodes:
             raise ValueError("Nothing to add")
+        if movies is None:
+            movies = []
+        if episodes is None:
+            episodes = []
 
-        payload = {}
-        if movies:
-            payload['movies'] = list(map(_dump_movie, movies))
-
-        if episodes:
-            payload['shows'] = _to_tvshows(episodes)
-
-        log("trakt.add. payload %r" % payload)
+        payload = {
+            'movies': list(map(_dump_movie, movies)),
+            'shows': _to_tvshows(episodes),
+        }
         response = self._trakt.post('sync/history', json=payload)
-        added = response['added'].get('movies', 0) + \
-                response['added'].get('episodes', 0)
+        added = response['added']['movies'] + response['added']['episodes']
+        if added != len(movies) + len(episodes):
+            logger.debug("add:payload %r" % payload)
+            logger.debug("add:response %r" % response)
         return added
 
     def remove_movies(self, movies):
@@ -95,18 +96,20 @@ class TraktLibrary(pykka.ThreadingActor):
 
     def remove(self, movies=None, episodes=None):
         if not movies and not episodes:
-            return 0
-        payload = {}
-        if movies:
-            payload['movies'] = list(map(_dump_movie, movies))
-        if episodes:
-            payload['shows'] = _to_tvshows(episodes)
-
-        log("trakt.remove. payload %r" % payload)
+            raise ValueError("Nothing to remove")
+        if movies is None:
+            movies = []
+        if episodes is None:
+            episodes = []
+        payload = {
+            'movies': list(map(_dump_movie, movies)),
+            'shows': _to_tvshows(episodes),
+        }
         response = self._trakt.post('sync/history/remove', json=payload)
-        log("trakt.remove. response %r" % response)
-        removed = response['deleted']['movies'] + \
-                  response['deleted']['episodes']
+        removed = response['deleted']['movies'] + response['deleted']['episodes']
+        if removed != len(movies) + len(episodes):
+            logger.debug("remove:payload %r" % payload)
+            logger.debug("remove:response %r" % response)
         return removed
 
 

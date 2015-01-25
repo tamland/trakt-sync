@@ -21,11 +21,11 @@ import logging
 import json
 import pykka
 from models import Movie, Episode
-from utils import log
+
+logger = logging.getLogger(__name__)
 
 
 class XBMCLibrary(pykka.ThreadingActor):
-    _logger = logging.getLogger('XBMCLibrary')
     _movie_properties = ['title', 'year', 'imdbnumber', 'playcount']
 
     def __init__(self):
@@ -118,7 +118,6 @@ def jsonrpc(method, params=None):
         'params': params,
     }
     payload = json.dumps(payload, encoding='utf-8')
-    log("payload: %r" % payload)
     try:
         import xbmc
     except:
@@ -131,6 +130,6 @@ def jsonrpc(method, params=None):
         response = json.loads(xbmc.executeJSONRPC(payload), encoding='utf-8')
 
     if 'error' in response:
-        log("jsonrpc error: %r" % response)
+        logger.error("jsonrpc error: %r" % response)
         return None
     return response

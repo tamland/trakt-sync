@@ -22,15 +22,19 @@ import logging
 import traceback
 import pykka
 import xbmc
+import utils
 from trakt_library import TraktLibrary
-from utils import log
 from xbmc_library import XBMCLibrary
 from sync import Sync
 
-logging.basicConfig(level=logging.DEBUG)
+utils.logging_config()
+logger = logging.getLogger('service')
+logging.getLogger('requests').setLevel(logging.WARNING)
+logging.getLogger('pykka').setLevel(logging.WARNING)
 
 
 class Monitor(xbmc.Monitor):
+
     def __init__(self, sync, xbmc_library):
         xbmc.Monitor.__init__(self)
         self._sync = sync
@@ -38,17 +42,17 @@ class Monitor(xbmc.Monitor):
 
     def onNotification(self, sender, method, data):
         data = json.loads(data)
-        log("sender: %s method: %s data: %r" % (sender, method, data))
+        logger.debug("sender: %s method: %s data: %r" % (sender, method, data))
 
         if method == b'VideoLibrary.OnUpdate' and 'playcount' in data:
             media_type = data['item']['type']
             if media_type == 'movie':
                 movie = self._xbmc_library.movie(data['item']['id']).get()
-                log("Monitor: %r" % movie)
-                self._sync.sync_movie(movie)
+                logger.debug(movie)
+                self._sync.sync_movie(movie).get()
             elif media_type == 'episode':
                 episode = self._xbmc_library.episode(data['item']['id']).get()
-                self._sync.sync_episode(episode)
+                self._sync.sync_episode(episode).get()
 
     def onScanFinished(self, library):
         pass
@@ -64,9 +68,9 @@ def main():
     except:
         traceback.print_exc()
 
-    log("stopping")
+    logger.debug("stopping")
     pykka.ActorRegistry.stop_all()
-    log("done")
+    logger.debug("done")
 
 
 if __name__ == '__main__':

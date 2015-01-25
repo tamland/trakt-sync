@@ -17,8 +17,11 @@
 
 from __future__ import unicode_literals
 
+import logging
 import pykka
-from utils import log, DialogProgress
+from utils import DialogProgress
+
+logger = logging.getLogger(__name__)
 
 
 class Sync(pykka.ThreadingActor):
@@ -40,13 +43,12 @@ class Sync(pykka.ThreadingActor):
             watched = [x for x in watched if x.id == item.id]
             if len(watched) > 0:
                 added = self._trakt_library.add(**{media_type: [item]}).get()
-                log("Sync. added %s items (%s)" % (added, item))
+                logger.debug("added %s items (%s)" % (added, item))
             else:
-                log("Sync. already watched (%s)" % item)
+                logger.debug("already watched (%s)" % item)
         else:
             removed = self._trakt_library.remove(**{media_type: [item]}).get()
-            log("Sync. removed %s items (%s)" % (removed, item))
-
+            logger.debug("removed %s items (%s)" % (removed, item))
 
 
 def sync_watched(xbmc_library, trakt_library):
@@ -60,8 +62,8 @@ def sync_watched(xbmc_library, trakt_library):
     local_movies = xbmc_library.movies()
     local_episodes = xbmc_library.episodes()
 
-    log("loaded %d local episodes" % (len(local_movies.get()) + len(local_episodes.get())))
-    log("loaded %d trakt episodes" % (len(trakt_movies.get()) + len(trakt_episodes.get())))
+    logger.debug("loaded %d local episodes" % (len(local_movies.get()) + len(local_episodes.get())))
+    logger.debug("loaded %d trakt episodes" % (len(trakt_movies.get()) + len(trakt_episodes.get())))
 
     # Compute diffs
     mov_need_update_local, mov_need_update_trakt = _diff(
@@ -95,7 +97,7 @@ def sync_watched(xbmc_library, trakt_library):
     map(lambda x: x.get(), updated_movies)
     map(lambda x: x.get(), updated_episodes)
 
-    log("added %d of %d items to trakt." %
+    logger.debug("added %d of %d items to trakt." %
         (added.get(), len(mov_need_update_trakt) + len(ep_need_update_trakt)))
 
     progress.update(100, "Done.")
@@ -127,11 +129,11 @@ def _diff(local_movies, trakt_movies):
     for item in need_update_local:
         item.xbmcid = items[item.id][0].xbmcid
 
-    log("need update local: %d" % len(need_update_local))
+    logger.debug("need update local: %d" % len(need_update_local))
     for m in need_update_local:
-        log(m)
-    log("need update trakt: %d" % len(need_update_trakt))
+        logger.debug(m)
+    logger.debug("need update trakt: %d" % len(need_update_trakt))
     for m in need_update_trakt:
-        log(m)
+        logger.debug(m)
 
     return need_update_local, need_update_trakt

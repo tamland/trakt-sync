@@ -17,11 +17,10 @@
 
 from __future__ import unicode_literals
 
-import json
-import requests
+import logging
 
 try:
-    import xbmc
+    import xbmc, xbmcaddon
     from xbmcgui import DialogProgress
 except ImportError:
     class DialogProgress():
@@ -33,10 +32,36 @@ except ImportError:
             pass
 
 
-def log(msg):
+class XBMCLogHandler(logging.StreamHandler):
+
+    def __init__(self):
+        logging.StreamHandler.__init__(self)
+        addon_id = xbmcaddon.Addon().getAddonInfo('id')
+        prefix = b"[%s] " % addon_id
+        formatter = logging.Formatter(prefix + b'%(name)s:%(message)s')
+        self.setFormatter(formatter)
+
+    def emit(self, record):
+        levels = {
+            logging.CRITICAL: xbmc.LOGFATAL,
+            logging.ERROR: xbmc.LOGERROR,
+            logging.WARNING: xbmc.LOGWARNING,
+            logging.INFO: xbmc.LOGINFO,
+            logging.DEBUG: xbmc.LOGDEBUG,
+            logging.NOTSET: xbmc.LOGNONE,
+        }
+        xbmc.log(self.format(record), levels[record.levelno])
+
+    def flush(self):
+        pass
+
+
+def logging_config():
     try:
         import xbmc
-    except:
-        print("%r" % msg)
+    except ImportError:
+        logging.basicConfig(level=logging.DEBUG)
     else:
-        xbmc.log("[service.trakt.sync] %r" % msg, xbmc.LOGDEBUG)
+        logger = logging.getLogger()
+        logger.addHandler(XBMCLogHandler())
+        logger.setLevel(logging.DEBUG)
