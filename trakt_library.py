@@ -71,7 +71,7 @@ class TraktLibrary(pykka.ThreadingActor):
 
     def add(self, movies=None, episodes=None):
         if not movies and not episodes:
-            raise ValueError("Nothing to add")
+            return 0
         if movies is None:
             movies = []
         if episodes is None:
@@ -96,7 +96,7 @@ class TraktLibrary(pykka.ThreadingActor):
 
     def remove(self, movies=None, episodes=None):
         if not movies and not episodes:
-            raise ValueError("Nothing to remove")
+            return 0
         if movies is None:
             movies = []
         if episodes is None:
