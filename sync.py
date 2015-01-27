@@ -16,7 +16,6 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 from __future__ import unicode_literals
-from itertools import chain
 
 import logging
 import pykka
@@ -91,14 +90,14 @@ def sync_watched(xbmc_library, trakt_library, progress=None):
         movies=mov_need_update_trakt,
         episodes=ep_need_update_trakt)
 
-    updated_movies = map(xbmc_library.update_movie_details, mov_need_update_local)
-    updated_episodes = map(xbmc_library.update_episode_details, ep_need_update_local)
+    updated_movies = list(map(xbmc_library.update_movie_details, mov_need_update_local))
+    updated_episodes = list(map(xbmc_library.update_episode_details, ep_need_update_local))
 
     # Get results
     needed_adding = len(mov_need_update_trakt) + len(ep_need_update_trakt)
     added = added.get()
-    updated = chain(map(lambda x: x.get(), updated_movies),
-                    map(lambda x: x.get(), updated_episodes))
+    updated = list(map(lambda x: x.get(), updated_movies)) + \
+              list(map(lambda x: x.get(), updated_episodes))
 
     logger.debug("added %d of %d items to trakt." % (added, needed_adding))
     logger.debug("updated %d of %d library items." % (sum(updated), len(updated)))
