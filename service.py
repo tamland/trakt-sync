@@ -43,8 +43,8 @@ class Monitor(xbmc.Monitor):
 
     def onNotification(self, sender, method, data):
         data = json.loads(data)
-        logger.debug("sender: %s method: %s data: %r" % (sender, method, data))
         if method == b'VideoLibrary.OnUpdate' and 'playcount' in data:
+            logger.debug("on playcount update. sender: %s data: %r" % (sender, data))
             self._on_playcount_update(data)
 
     def _on_playcount_update(self, data):
