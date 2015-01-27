@@ -16,6 +16,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 from __future__ import unicode_literals
+from itertools import chain
 
 import logging
 import pykka
@@ -54,8 +55,9 @@ class Sync(pykka.ThreadingActor):
             return removed
 
 
-def sync_watched(xbmc_library, trakt_library):
-    progress = DialogProgress()
+def sync_watched(xbmc_library, trakt_library, progress=None):
+    if progress is None:
+        progress = DialogProgress()
     progress.create("Trakt sync")
 
     # Fetch data
@@ -89,21 +91,20 @@ def sync_watched(xbmc_library, trakt_library):
         movies=mov_need_update_trakt,
         episodes=ep_need_update_trakt)
 
-    updated_movies = [xbmc_library.update_movie_details(item)
-                      for item in mov_need_update_local]
-    updated_episodes = [xbmc_library.update_episode_details(item)
-                        for item in ep_need_update_local]
+    updated_movies = map(xbmc_library.update_movie_details, mov_need_update_local)
+    updated_episodes = map(xbmc_library.update_episode_details, ep_need_update_local)
 
-    # wait
-    # TODO: report results
-    added.get()
-    map(lambda x: x.get(), updated_movies)
-    map(lambda x: x.get(), updated_episodes)
+    # Get results
+    needed_adding = len(mov_need_update_trakt) + len(ep_need_update_trakt)
+    added = added.get()
+    updated = chain(map(lambda x: x.get(), updated_movies),
+                    map(lambda x: x.get(), updated_episodes))
 
-    logger.debug("added %d of %d items to trakt." %
-        (added.get(), len(mov_need_update_trakt) + len(ep_need_update_trakt)))
+    logger.debug("added %d of %d items to trakt." % (added, needed_adding))
+    logger.debug("updated %d of %d library items." % (sum(updated), len(updated)))
 
     progress.update(100, "Done.")
+    return added == needed_adding and sum(updated) == len(updated)
 
 
 def _group_movies(local_movies, trakt_movies):
